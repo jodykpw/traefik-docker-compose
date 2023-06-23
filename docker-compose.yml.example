@@ -1,0 +1,62 @@
+version: '3.9'
+
+networks:
+  traefik:
+    external: true
+
+volumes:
+  traefik_config:
+    name: traefik_config
+  traefik_certs:
+    name: traefik_certs
+
+services:
+  # The reverse proxy service (Traefik)
+  reverse-proxy:
+    # The official v2.10.1 Traefik docker image
+    image: "traefik:v2.10.1"
+    container_name: traefik
+    restart: unless-stopped
+    # Static Configuration CLI
+    # Ref: https://docs.traefik.io/reference/static-configuration/cli/
+    command: --configFile=/etc/traefik/traefik.yml
+    ports:
+      # Expose 80 for inbound HTTP traffic.
+      - "80:80"
+      # Expose 443 for inbound HTTPS traffic.
+      - "443:443"
+      # The Web UI (enabled by --api.insecure=true)
+      - "8080:8080"
+    networks:
+      - traefik
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+      # host filesystem which is managed by Docker 
+      # Mount the directory contiaining the configuration file
+      - "traefik_config:/etc/traefik"
+      # Mount the directory containing the certs
+      - "traefik_certs:/etc/certs"
+    healthcheck:
+      # Run traefik healthcheck command
+      # https://doc.traefik.io/traefik/operations/cli/#healthcheck
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    labels:
+      # Dynamic configuration with Docker Labels
+      # Ref: https://docs.traefik.io/reference/dynamic-configuration/docker/
+      # Explicitly tell Traefik to expose this container
+      - "traefik.enable=true" 
+      # The domain the service will respond to
+      - "traefik.http.routers.traefik-insecure-router.rule=Host(`traefik.example.com`)"
+      # Allow request only from the predefined entry point named "web" http port
+      - "traefik.http.routers.traefik-insecure-router.entrypoints=web"
+      # Set the service parameter on the router.
+      - "traefik.http.routers.traefik-insecure-router.service=traefik-insecure-service"
+      # Forwarding requests to more than one port on a container requires referencing the 
+      # service loadbalancer port definition using the service parameter on the router.
+      - "traefik.http.services.traefik-insecure-service.loadbalancer.server.port=8080"

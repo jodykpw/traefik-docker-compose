@@ -1,0 +1,13 @@
+# Dynamic Configuration
+# https://docs.traefik.io/getting-started/configuration-overview/
+# https://docs.traefik.io/reference/dynamic-configuration/file/  
+
+# http routing section
+# https://docs.traefik.io/routing/overview/
+
+
+# Transport Layer Security
+tls:
+  certificates:
+    - certFile: /etc/certs/foo.cert
+      keyFile: /etc/certs/foo.key
